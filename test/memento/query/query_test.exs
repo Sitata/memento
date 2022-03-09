@@ -335,6 +335,62 @@ defmodule Memento.Tests.Query do
     end
   end
 
+  describe "#dirty_select" do
+    @table Tables.Movie
+
+    setup do
+      Memento.Table.create(@table)
+      @table.seed
+    end
+
+
+    test "returns all records for empty guard" do
+      movies = Query.dirty_select(@table, [])
+
+      assert length(movies) == 12
+      Enum.each(movies, &(assert %@table{} = &1))
+    end
+
+
+    test "returns all records that match a specific attribute" do
+      assert [%{title: "Jaws", year: 1975}] =
+        Query.dirty_select(@table, {:==, :year, 1975})
+
+      assert [%{title: "Rush"}, %{title: "Rush"}] =
+        Query.dirty_select(@table, {:==, :title, "Rush"})
+    end
+
+
+    test "returns all records that match multiple attributes" do
+      movies =
+        Query.dirty_select(@table, [
+          {:==, :year, 1993},
+          {:==, :director, "Steven Spielberg"},
+        ])
+
+      assert [%{title: "Jurassic Park"}, %{title: "Schindler's List"}] = movies
+    end
+
+
+    test "works with complex nested guards" do
+      guards =
+        {:and,
+          {:>=, :year, 2010},
+          {:or,
+            {:==, :director, "Quentin Tarantino"},
+            {:==, :director, "Steven Spielberg"},
+          }
+        }
+
+      movies = Query.dirty_select(@table, guards)
+
+      Enum.each(movies, fn m ->
+        assert m.year > 2010
+        assert m.director in ["Quentin Tarantino", "Steven Spielberg"]
+      end)
+    end
+  end
+
 
 
   describe "#select_raw" do

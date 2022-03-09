@@ -442,6 +442,20 @@ defmodule Memento.Query do
     select_raw(table, [{ match_head, guards, @result }], opts)
   end
 
+  @doc """
+  The :mnesia.dirty_select version of select/3.
+
+  You should be aware of the reprecussions of using dirty_select before using.
+  """
+  @spec dirty_select(Table.name, list(tuple) | tuple, options) :: list(Table.record)
+  def dirty_select(table, guards, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.delete(:lock)
+      |> Keyword.put(:dirty, true)
+
+    select(table, guards, opts)
+  end
 
 
 
@@ -583,6 +597,7 @@ defmodule Memento.Query do
     lock   = Keyword.get(opts, :lock, :read)
     limit  = Keyword.get(opts, :limit, nil)
     coerce = Keyword.get(opts, :coerce, true)
+    is_dirty = Keyword.get(opts, :dirty, nil)
 
     # Use select/4 if there is limit, otherwise use select/3
     args =
@@ -592,7 +607,12 @@ defmodule Memento.Query do
       end
 
     # Execute select method with the no. of args
-    result = Mnesia.call(:select, args)
+    result =
+      case is_dirty do
+        true ->
+          Mnesia.call(:dirty_select, [table, match_spec])
+        _ -> Mnesia.call(:select, args)
+      end
 
     # Coerce result conversion if `coerce: true`
     case coerce do
