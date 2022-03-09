@@ -210,6 +210,21 @@ defmodule Memento.Query do
     end
   end
 
+  @doc """
+  Finds the Memento record for the given id in the specified table using `:mnesia.dirty_read/2`.
+
+  If no record is found, `nil` is returned.
+
+  You should be aware of the reprecussions of using dirty_read before using.
+  """
+  @spec dirty_read(Table.name, any) :: Table.record | nil
+  def dirty_read(table, id) do
+    case Mnesia.call(:dirty_read, [table, id]) do
+      []           -> nil
+      [record | _] -> Query.Data.load(record)
+    end
+  end
+
 
 
 

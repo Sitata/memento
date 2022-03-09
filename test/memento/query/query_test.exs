@@ -36,6 +36,31 @@ defmodule Memento.Tests.Query do
     end
   end
 
+  describe "#dirty_read" do
+    @table Tables.User
+
+    setup do
+      Memento.Table.create(@table)
+      Support.Mnesia.transaction(fn ->
+        :mnesia.write({@table, 1, :a})
+        :mnesia.write({@table, 2, :b})
+        :mnesia.write({@table, 3, :c})
+      end)
+      :ok
+    end
+
+
+    test "returns record struct when an item exists for given key" do
+      assert %@table{id: 1, name: :a} = Query.dirty_read(@table, 1)
+      assert %@table{id: 2, name: :b} = Query.dirty_read(@table, 2)
+      assert %@table{id: 3, name: :c} = Query.dirty_read(@table, 3)
+    end
+
+    test "returns nil when no record is found" do
+      refute Query.dirty_read(@table, 4)
+    end
+  end
+
 
 
   describe "#write" do
@@ -377,4 +402,3 @@ defmodule Memento.Tests.Query do
   end
 
 end
-
